@@ -1,0 +1,2398 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ระบบจัดการนักเรียน</title>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- โหลดไลบรารีอ่านและเขียนไฟล์ Excel -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+    
+    <style>
+        :root {
+            /* โทนสีมินิมอล/พาสเทลตุ่นๆ สบายตา */
+            --primary: #637A9F;        /* ฟ้าหม่นอมเทา */
+            --primary-light: #EBF1F6;
+            --primary-hover: #4D648B;
+            --success: #789476;        /* เขียวเซจ (Sage Green) */
+            --success-light: #EBF2EC;
+            --danger: #BD6A6B;         /* แดงอมชมพูหม่น (Dusty Rose) */
+            --danger-light: #F8EBEB;
+            --warning: #C79051;        /* ส้มมัสตาร์ดหม่น */
+            --warning-light: #FBF1E6;
+            --info: #6A8CA1;           /* ฟ้าอมเขียวหม่น */
+            --info-light: #EBF2F6;
+            
+            --bg: #F5F7FA;             /* พื้นหลังสว่างอมฟ้านิดๆ สบายตา */
+            --card: #FFFFFF;
+            --text: #374151;           /* ลดความดำของตัวอักษรลงนิดหน่อย */
+            --muted: #838F9F;          /* สีข้อความรองที่ดูนุ่มนวลขึ้น */
+            --border: #E2E8F0;
+            --radius: 12px;
+            --shadow: 0 4px 20px rgba(99, 122, 159, 0.08);
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Prompt', sans-serif; }
+        body { background: var(--bg); color: var(--text); padding: 20px; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        /* ===== HEADER ===== */
+        .header {
+            background: linear-gradient(135deg, #637A9F, #829ABF);
+            color: white;
+            padding: 24px 28px;
+            border-radius: 18px;
+            box-shadow: 0 10px 30px rgba(99, 122, 159, 0.2);
+            margin-bottom: 20px;
+        }
+        .header-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 18px;
+        }
+        .header h1 { font-size: 24px; font-weight: 600; letter-spacing: 0.5px; }
+        
+        .btn-logout {
+            background: rgba(255,255,255,0.2);
+            border: 1px solid rgba(255,255,255,0.3);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+            font-family: 'Prompt', sans-serif;
+            transition: 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .btn-logout:hover { background: var(--danger); border-color: var(--danger); }
+
+        .controls {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(255,255,255,0.15);
+            padding: 8px 14px;
+            border-radius: 10px;
+            flex-wrap: wrap;
+        }
+        .control-group label { font-size: 14px; white-space: nowrap; }
+        .picker {
+            padding: 6px 12px;
+            border-radius: 8px;
+            border: none;
+            font-size: 15px;
+            font-family: 'Prompt', sans-serif;
+            color: var(--text);
+            cursor: pointer;
+            background: white;
+        }
+        .icon-btn {
+            background: rgba(255,255,255,0.25);
+            border: none;
+            border-radius: 7px;
+            padding: 5px 9px;
+            color: white;
+            cursor: pointer;
+            font-size: 14px;
+            transition: 0.2s;
+        }
+        .icon-btn:hover { background: rgba(255,255,255,0.45); }
+        .icon-btn.del:hover { background: var(--danger); }
+        /* ===== TABS ===== */
+        .tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .tab-btn {
+            flex: 1;
+            min-width: 140px;
+            padding: 12px 20px;
+            border: 1px solid transparent;
+            border-radius: 10px;
+            background: var(--card);
+            color: var(--muted);
+            font-size: 15px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: var(--shadow);
+        }
+        .tab-btn.active {
+            background: var(--primary);
+            color: white;
+            box-shadow: 0 4px 14px rgba(99, 122, 159, 0.3);
+        }
+        /* ===== SUMMARY CARDS ===== */
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+            gap: 14px;
+            margin-bottom: 18px;
+        }
+        .stat-card {
+            background: var(--card);
+            border-radius: var(--radius);
+            padding: 18px 14px;
+            text-align: center;
+            box-shadow: var(--shadow);
+            border-top: 3px solid transparent;
+        }
+        .stat-card.total { border-color: var(--primary); }
+        .stat-card.present { border-color: var(--success); }
+        .stat-card.leave { border-color: var(--info); }
+        .stat-card.absent { border-color: var(--danger); }
+        .stat-card.late { border-color: var(--warning); }
+
+        .stat-card h3 { font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+        .stat-card .num { font-size: 30px; font-weight: 600; }
+        .stat-card.total .num { color: var(--primary); }
+        .stat-card.present .num { color: var(--success); }
+        .stat-card.leave .num { color: var(--info); }
+        .stat-card.absent .num { color: var(--danger); }
+        .stat-card.late .num { color: var(--warning); }
+        /* ===== TOOLBAR ===== */
+        .toolbar {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: var(--card);
+            padding: 12px 16px;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            margin-bottom: 14px;
+            flex-wrap: wrap;
+            border: 1px solid var(--border);
+        }
+        .toolbar-label { font-size: 14px; font-weight: 500; color: #374151; white-space: nowrap; }
+        .toolbar-sep { width: 1px; height: 24px; background: var(--border); }
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            border: none;
+            padding: 8px 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: 'Prompt', sans-serif;
+            font-size: 13px;
+            font-weight: 500;
+            color: white;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        .btn:hover { opacity: 0.9; transform: translateY(-1px); }
+        .btn:active { transform: scale(0.96); }
+        .btn-primary { background: var(--primary); }
+        .btn-success { background: var(--success); }
+        .btn-danger { background: var(--danger); }
+        .btn-warning { background: var(--warning); }
+        .btn-info { background: var(--info); }
+        .btn-muted { background: var(--muted); }
+        .btn-outline {
+            background: transparent;
+            color: var(--primary);
+            border: 1.5px solid var(--primary);
+        }
+        .btn-outline:hover { background: var(--primary-light); }
+        .btn-lg { padding: 11px 22px; font-size: 15px; border-radius: 10px; }
+        /* ===== TABLE ===== */
+        .table-wrap {
+            background: var(--card);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            overflow: auto;
+            margin-bottom: 16px;
+            -webkit-overflow-scrolling: touch;
+        }
+        table { width: 100%; border-collapse: collapse; min-width: 620px; }
+        th, td {
+            padding: 11px 12px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+            vertical-align: middle;
+        }
+        th { background: #F9FAFB; color: var(--muted); font-weight: 500; font-size: 13px; }
+        tbody tr { transition: background 0.15s; }
+        tbody tr:hover { background: #F4F7FB; }
+        tbody tr[draggable="true"] { cursor: grab; }
+        tbody tr.drag-over { box-shadow: inset 0 3px 0 var(--primary); background: var(--primary-light) !important; }
+        /* ===== BADGES ===== */
+        .badge {
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+            display: inline-block;
+            white-space: nowrap;
+        }
+        .badge-pending { background: #E2E8F0; color: #475569; }
+        .badge-present { background: var(--success-light); color: #3F5E41; }
+        .badge-leave { background: var(--info-light); color: #395769; }
+        .badge-absent { background: var(--danger-light); color: #7A3B3D; }
+        .badge-late { background: var(--warning-light); color: #7A552A; }
+        /* ===== ROW ACTIONS ===== */
+        .row-btns { display: flex; gap: 4px; flex-wrap: wrap; }
+        .row-btn {
+            border: none;
+            padding: 6px 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 500;
+            font-family: 'Prompt', sans-serif;
+            color: white;
+            transition: all 0.15s;
+        }
+        .row-btn:hover { opacity: 0.85; }
+        .row-btn-present { background: var(--success); }
+        .row-btn-leave { background: var(--info); }
+        .row-btn-absent { background: var(--danger); }
+        .row-btn-late { background: var(--warning); }
+        .cell-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 13px;
+            color: #9CA3AF;
+            padding: 3px 5px;
+            border-radius: 5px;
+            transition: 0.15s;
+        }
+        .cell-btn:hover { background: var(--border); color: var(--primary); }
+        .cell-btn.del:hover { color: var(--danger); }
+        .cb { width: 17px; height: 17px; cursor: pointer; accent-color: var(--primary); }
+        /* ===== SCORE TABLE ===== */
+        #score-table th, #score-table td {
+            text-align: center;
+            padding: 8px 5px;
+            border: 1px solid var(--border);
+            white-space: nowrap;
+            vertical-align: middle;
+        }
+        #score-table th { background: #F9FAFB; font-size: 12px; }
+        .sticky-col { position: sticky; z-index: 1; background: white; }
+        #score-table th.sticky-col { background: #F9FAFB; z-index: 2; }
+        #score-table tbody tr:hover .sticky-col { background: #F4F7FB; }
+        .sticky-id { left: 0; min-width: 38px; }
+        .sticky-code { left: 38px; min-width: 90px; }
+        .sticky-name { left: 128px; min-width: 170px; text-align: left !important; box-shadow: 2px 0 5px -2px rgba(0,0,0,0.05); }
+        .col-header { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+        .col-actions { display: flex; gap: 2px; }
+        .score-input {
+            width: 44px;
+            text-align: center;
+            border: 1px solid #D1D5DB;
+            border-radius: 5px;
+            padding: 5px 2px;
+            font-family: 'Prompt', sans-serif;
+            font-size: 13px;
+            background: #F9FAFB;
+            transition: 0.15s;
+        }
+        .score-input:focus { outline: 2px solid var(--primary); background: white; }
+        .score-input.wide { width: 54px; }
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; }
+        .score-sum { font-weight: 600; color: var(--primary); }
+        .score-total { font-weight: 700; color: #1e3a8a; }
+        .score-scroll { max-height: 70vh; overflow: auto; }
+        /* ===== BOTTOM ACTIONS ===== */
+        .bottom-bar {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 14px;
+            flex-wrap: wrap;
+        }
+
+        /* ===== MODALS ===== */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.4);
+            backdrop-filter: blur(4px);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .modal-overlay.open { display: flex; }
+        .modal-box {
+            background: var(--card);
+            border-radius: 18px;
+            padding: 24px;
+            width: 100%;
+            max-width: 560px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+            animation: slideUp 0.2s ease;
+        }
+        .modal-box.wide { max-width: 780px; }
+
+        @keyframes slideUp {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .modal-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 18px;
+            padding-bottom: 14px;
+            border-bottom: 2px solid var(--bg);
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .modal-head h2 { color: var(--primary); font-size: 18px; }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 26px;
+            color: var(--muted);
+            cursor: pointer;
+            line-height: 1;
+            padding: 0 4px;
+            transition: 0.15s;
+        }
+        .modal-close:hover { color: var(--danger); }
+
+        /* Confirm modal */
+        .confirm-icon { font-size: 48px; text-align: center; margin-bottom: 10px; }
+        .confirm-msg { font-size: 16px; line-height: 1.6; color: var(--text); text-align: center; margin-bottom: 22px; }
+        .confirm-note { font-size: 13px; color: var(--muted); background: #FEF9C3; padding: 8px 12px; border-radius: 8px; margin-bottom: 18px; }
+        .confirm-btns { display: flex; gap: 10px; justify-content: center; }
+
+        /* Input prompt modal */
+        .prompt-label { font-size: 14px; color: var(--muted); margin-bottom: 8px; }
+        .prompt-input {
+            width: 100%;
+            padding: 12px 14px;
+            border: 2px solid var(--border);
+            border-radius: 10px;
+            font-family: 'Prompt', sans-serif;
+            font-size: 15px;
+            outline: none;
+            margin-bottom: 16px;
+            transition: 0.2s;
+        }
+        .prompt-input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(99, 122, 159, 0.15); }
+
+        /* Toast */
+        #toast {
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%) translateY(60px);
+            background: #374151;
+            color: white;
+            padding: 12px 22px;
+            border-radius: 30px;
+            font-size: 14px;
+            z-index: 9999;
+            transition: transform 0.3s ease;
+            pointer-events: none;
+            white-space: nowrap;
+        }
+        #toast.show { transform: translateX(-50%) translateY(0); }
+
+        /* Textarea */
+        .bulk-textarea {
+            width: 100%;
+            height: 120px;
+            padding: 12px;
+            border: 2px solid var(--border);
+            border-radius: 10px;
+            font-family: 'Prompt', sans-serif;
+            font-size: 14px;
+            resize: vertical;
+            outline: none;
+            transition: 0.2s;
+        }
+        .bulk-textarea:focus { border-color: var(--primary); }
+
+        /* Form row */
+        .form-row { margin-bottom: 14px; }
+        .form-row label { display: block; font-size: 14px; font-weight: 500; margin-bottom: 6px; }
+        .form-hint { font-size: 12px; color: var(--muted); margin-top: 5px; }
+
+        .modal-footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; }
+
+        /* Teacher name btn */
+        .teacher-btn {
+            background: none;
+            border: 1px solid rgba(255,255,255,0.4);
+            color: white;
+            padding: 3px 8px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: 0.2s;
+        }
+        .teacher-btn:hover { background: rgba(255,255,255,0.2); }
+
+        /* Backup section */
+        .backup-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .backup-card {
+            background: var(--bg);
+            border-radius: 10px;
+            padding: 16px;
+            text-align: center;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: 0.2s;
+        }
+        .backup-card:hover { border-color: var(--primary); background: var(--primary-light); }
+        .backup-card .bc-icon { font-size: 28px; margin-bottom: 8px; }
+        .backup-card h4 { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+        .backup-card p { font-size: 12px; color: var(--muted); }
+
+        /* Holiday Indicator */
+        .holiday-indicator {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--danger);
+            margin-left: 8px;
+            background: var(--danger-light);
+            padding: 4px 8px;
+            border-radius: 6px;
+            display: none;
+            white-space: nowrap;
+        }
+
+        /* Print styles */
+        @media print {
+            body { background: white; padding: 0; }
+            .no-print { display: none !important; }
+            .table-wrap { box-shadow: none; overflow: visible; }
+            table { min-width: 0; }
+            .header { box-shadow: none; }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            body { padding: 10px; }
+            .header h1 { font-size: 18px; }
+            .header-top { flex-direction: column; align-items: flex-start; }
+            .controls { flex-direction: column; }
+            .control-group { width: 100%; }
+            .picker { width: 100%; }
+            .tabs { flex-direction: column; }
+            .tab-btn { min-width: 0; }
+            .toolbar { flex-direction: column; align-items: stretch; }
+            .toolbar .btn { width: 100%; }
+            .backup-grid { grid-template-columns: 1fr; }
+        }
+
+        @media (max-width: 480px) {
+            .stat-card .num { font-size: 24px; }
+            .btn { font-size: 12px; padding: 7px 10px; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- ===== MAIN APP ===== -->
+<div id="main-app">
+<div class="container">
+
+    <header class="header no-print">
+        <div class="header-top">
+            <h1>📝 ระบบจัดการนักเรียนและคะแนน</h1>
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <span id="user-email-display" style="font-size:14px; color: #EBF1F6; background: rgba(0,0,0,0.2); padding: 4px 12px; border-radius: 20px;"></span>
+                <button class="btn-logout" onclick="logout()">🚪 ออกจากระบบ</button>
+            </div>
+        </div>
+
+        <div class="controls">
+            <div class="control-group">
+                <span style="font-size:13px">👨‍🏫 ผู้สอน:</span>
+                <strong id="teacher-name-display" style="font-size:14px">ยังไม่ระบุ</strong>
+                <button class="teacher-btn" onclick="openPrompt('แก้ไขชื่ออาจารย์ผู้สอน','ชื่อ-นามสกุล',saveTeacherName,currentTeacherName)">✏️</button>
+            </div>
+            <div class="control-group">
+                <label style="font-size:13px">📅 วันที่:</label>
+                <input type="date" id="current-date" class="picker" onchange="loadData()">
+                <!-- จุดแสดงวันหยุด -->
+                <span id="holiday-indicator" class="holiday-indicator"></span>
+            </div>
+            <div class="control-group">
+                <label style="font-size:13px">🏫 ห้อง:</label>
+                <select id="room-select" class="picker" onchange="loadData()"></select>
+                <button class="icon-btn" onclick="addRoom()" title="เพิ่มห้อง">➕</button>
+                <button class="icon-btn" onclick="openPrompt('แก้ไขชื่อห้องเรียน','ชื่อห้องเรียน',saveRoomName,()=>roomNames[currentRoom])">✏️</button>
+                <button class="icon-btn del" onclick="confirmDeleteRoom()" title="ลบห้อง">🗑️</button>
+            </div>
+            <button class="btn btn-outline" style="background:rgba(255,255,255,0.15);color:white;border-color:rgba(255,255,255,0.4)" onclick="openBackupModal()">💾 Backup / Export</button>
+        </div>
+    </header>
+
+    <div class="tabs no-print">
+        <button class="tab-btn active" id="btn-tab-att" onclick="switchTab('att')">📋 เช็คชื่อเข้าเรียน</button>
+        <button class="tab-btn" id="btn-tab-score" onclick="switchTab('score')">⭐ ตารางคะแนนเก็บ</button>
+    </div>
+
+    <!-- ===== ATTENDANCE TAB ===== -->
+    <div id="tab-att">
+        <!-- เพิ่มการ์ดสถิติการ "ลา" ลงไป -->
+        <div class="summary-grid">
+            <div class="stat-card total"><h3>นักเรียนทั้งหมด</h3><div class="num" id="stat-total">0</div></div>
+            <div class="stat-card present"><h3>มาเรียน</h3><div class="num" id="stat-present">0</div></div>
+            <div class="stat-card leave"><h3>ลา</h3><div class="num" id="stat-leave">0</div></div>
+            <div class="stat-card absent"><h3>ขาดเรียน</h3><div class="num" id="stat-absent">0</div></div>
+            <div class="stat-card late"><h3>มาสาย</h3><div class="num" id="stat-late">0</div></div>
+        </div>
+
+        <div class="toolbar no-print">
+            <!-- ส่วนเลือกประเภทการเช็คชื่อ -->
+            <span class="toolbar-label">📌 ประเภท:</span>
+            <select id="att-type-select" class="picker" style="border: 1px solid var(--border); padding: 5px 10px; margin-right:10px; font-weight:600; color:var(--primary);" onchange="renderAttTable()">
+                <option value="status_class">📚 เช็คชื่อเข้าเรียน</option>
+                <option value="status_assembly">🇹🇭 เช็คชื่อเข้าแถว</option>
+            </select>
+            <div class="toolbar-sep"></div>
+
+            <span class="toolbar-label">🎯 เช็คพร้อมกัน:</span>
+            <button class="btn btn-success" onclick="markBulk('present')">✅ มา</button>
+            <button class="btn btn-info" onclick="markBulkLeave()">🔵 ลา</button>
+            <button class="btn btn-danger" onclick="markBulk('absent')">❌ ขาด</button>
+            <button class="btn btn-warning" onclick="markBulk('late')">⚠️ สาย</button>
+            
+            <div class="toolbar-sep"></div>
+            <button class="btn btn-success" onclick="openAddStudentModal()">➕ เพิ่มนักเรียน</button>
+            <button class="btn btn-danger" onclick="confirmDeleteSelected()">🗑️ ลบที่เลือก</button>
+            <button class="btn btn-muted" style="margin-left:auto" onclick="confirmDeleteAll()">🗑️ ลบทั้งหมด</button>
+        </div>
+
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th width="5%" style="text-align:center">
+                            <input type="checkbox" id="select-all" class="cb" onclick="toggleSelectAll(this)">
+                        </th>
+                        <th width="8%">เลขที่</th>
+                        <th width="12%">รหัสประจำตัว</th>
+                        <th width="24%">ชื่อ - นามสกุล</th>
+                        <th width="16%">สถานะ</th>
+                        <th width="25%">เช็คชื่อ</th>
+                        <th width="10%">ข้อมูล</th>
+                    </tr>
+                </thead>
+                <tbody id="att-tbody"></tbody>
+            </table>
+        </div>
+
+        <div class="bottom-bar no-print">
+            <button class="btn btn-muted btn-lg" onclick="confirmReset()">🔄 ล้างการเช็คชื่อวันนี้</button>
+            <button class="btn btn-primary btn-lg" onclick="openSummaryModal()">📊 สรุปการเข้าเรียน</button>
+            <button class="btn btn-outline btn-lg" onclick="printAttendance()">🖨️ พิมพ์รายชื่อ</button>
+        </div>
+    </div>
+
+    <!-- ===== SCORE TAB ===== -->
+    <div id="tab-score" style="display:none">
+        <div class="toolbar no-print">
+            <button class="btn btn-success" onclick="openAddStudentModal()">➕ เพิ่มนักเรียน</button>
+            <button class="btn btn-primary" onclick="addScoreCol()">➕ เพิ่มช่องคะแนน</button>
+            <button class="btn btn-outline" style="margin-left:auto" onclick="exportScoreExcel()">📊 Export Excel</button>
+        </div>
+        <div class="table-wrap score-scroll" id="score-table-wrap"></div>
+    </div>
+
+</div><!-- /container -->
+</div><!-- /main-app -->
+
+<!-- ===== MODALS ===== -->
+
+<!-- Add Student -->
+<div id="modal-add-student" class="modal-overlay">
+    <div class="modal-box">
+        <div class="modal-head">
+            <h2>➕ เพิ่มรายชื่อนักเรียน</h2>
+            <button class="modal-close" onclick="closeModal('modal-add-student')">&times;</button>
+        </div>
+        
+        <div class="form-row">
+            <label>นำเข้าจากไฟล์ Excel / CSV</label>
+            <input type="file" id="excel-import-file" accept=".xlsx, .xls, .csv" style="display:none" onchange="handleExcelImport(event)">
+            <button class="btn btn-outline" style="width: 100%; margin-bottom: 8px; justify-content: center;" onclick="document.getElementById('excel-import-file').click()">
+                📁 เลือกไฟล์ Excel / CSV เพื่อดึงรายชื่อ
+            </button>
+            <div class="form-hint">💡 ระบบจะพยายามค้นหาคอลัมน์ชื่อ "รหัส", "เลขประจำตัว" ร่วมกับชื่อ-นามสกุลให้อัตโนมัติ</div>
+        </div>
+
+        <div class="form-row">
+            <label>รายชื่อนักเรียนที่ดึงมา (บรรทัดละ 1 คน)</label>
+            <textarea id="bulk-input" class="bulk-textarea" placeholder="65101 เด็กชาย สมชาย รักเรียน&#10;65102 เด็กหญิง สมหญิง ตั้งใจ"></textarea>
+            <div class="form-hint">💡 สามารถแก้ไขหรือพิมพ์เพิ่มตรงนี้ได้เลย (รูปแบบ: <b>[รหัส] [ชื่อ-นามสกุล]</b> หรือมีแค่ชื่อก็ได้)</div>
+        </div>
+        <div class="form-row">
+            <label>แทรกที่เลขที่ <span style="font-weight:400;color:var(--muted)">(ไม่บังคับ — ปล่อยว่างคือเพิ่มต่อท้าย)</span></label>
+            <input type="number" id="insert-at" class="prompt-input" placeholder="เช่น 5" style="margin-bottom:0">
+            <div class="form-hint">⚠️ หากระบุเลขที่ที่มีคนอยู่แล้ว จะดันคนเดิมลงอัตโนมัติ</div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-muted" onclick="closeModal('modal-add-student')">ยกเลิก</button>
+            <button class="btn btn-success" onclick="saveBulkStudents()">💾 บันทึกรายชื่อ</button>
+        </div>
+    </div>
+</div>
+
+<!-- Summary -->
+<div id="modal-summary" class="modal-overlay">
+    <div class="modal-box wide">
+        <div class="modal-head">
+            <h2>📊 สรุปการเช็คชื่อ</h2>
+            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+                <select id="summary-att-type" class="picker" style="border:1px solid var(--border); font-weight:600; color:var(--primary);" onchange="renderSummaryTable()">
+                    <option value="status_class">📚 สรุปเข้าเรียน</option>
+                    <option value="status_assembly">🇹🇭 สรุปเข้าแถว</option>
+                </select>
+                <select id="summary-room-select" class="picker" style="border:1px solid var(--border)" onchange="renderSummaryTable()"></select>
+                <button class="btn btn-outline no-print" onclick="printSummary()">🖨️ พิมพ์</button>
+                <button class="modal-close" onclick="closeModal('modal-summary')">&times;</button>
+            </div>
+        </div>
+        <div class="table-wrap" style="box-shadow:none;border:1px solid var(--border)">
+            <table>
+                <thead>
+                    <tr>
+                        <th>เลขที่</th>
+                        <th>รหัสประจำตัว</th>
+                        <th>ชื่อ - นามสกุล</th>
+                        <th>มา (ครั้ง)</th>
+                        <th>ลา (ครั้ง)</th>
+                        <th>ขาด (ครั้ง)</th>
+                        <th>สาย (ครั้ง)</th>
+                        <th>หมายเหตุ</th>
+                    </tr>
+                </thead>
+                <tbody id="summary-tbody"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Individual Summary Modal -->
+<div id="modal-student-summary" class="modal-overlay">
+    <div class="modal-box">
+        <div class="modal-head">
+            <h2 id="student-summary-title">📊 สรุปข้อมูลส่วนบุคคล</h2>
+            <button class="modal-close" onclick="closeModal('modal-student-summary')">&times;</button>
+        </div>
+        <div id="student-summary-content">
+            <!-- Content will be injected here -->
+        </div>
+    </div>
+</div>
+
+<!-- Export Attendance Filter Modal -->
+<div id="modal-export-att" class="modal-overlay">
+    <div class="modal-box" style="max-width: 400px;">
+        <div class="modal-head">
+            <h2>📋 ตั้งค่า Export เช็คชื่อ</h2>
+            <button class="modal-close" onclick="closeModal('modal-export-att')">&times;</button>
+        </div>
+        <div class="form-row">
+            <label>ตั้งแต่วันที่:</label>
+            <input type="date" id="export-start-date" class="prompt-input">
+        </div>
+        <div class="form-row">
+            <label>ถึงวันที่:</label>
+            <input type="date" id="export-end-date" class="prompt-input">
+        </div>
+        <div class="form-row" style="display: flex; align-items: center; gap: 8px; margin-top: 20px;">
+            <input type="checkbox" id="export-exclude-weekend" checked style="width:18px; height:18px; accent-color:var(--primary);">
+            <label for="export-exclude-weekend" style="margin-bottom:0; cursor:pointer;">ไม่รวมวันหยุดสุดสัปดาห์ (เสาร์-อาทิตย์)</label>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-muted" onclick="closeModal('modal-export-att')">ยกเลิก</button>
+            <button class="btn btn-primary" onclick="executeExportAttExcel()">ดาวน์โหลดไฟล์ Excel</button>
+        </div>
+    </div>
+</div>
+
+<!-- Confirm modal -->
+<div id="modal-confirm" class="modal-overlay">
+    <div class="modal-box" style="max-width:420px">
+        <div class="confirm-icon" id="confirm-icon">⚠️</div>
+        <div class="confirm-msg" id="confirm-msg"></div>
+        <div class="confirm-note" id="confirm-note" style="display:none"></div>
+        <div class="confirm-btns">
+            <button class="btn btn-muted btn-lg" onclick="closeModal('modal-confirm')">ยกเลิก</button>
+            <button class="btn btn-danger btn-lg" id="confirm-ok-btn" onclick="">ยืนยัน</button>
+        </div>
+    </div>
+</div>
+
+<!-- Prompt modal -->
+<div id="modal-prompt" class="modal-overlay">
+    <div class="modal-box" style="max-width:420px">
+        <div class="modal-head">
+            <h2 id="prompt-title">แก้ไข</h2>
+            <button class="modal-close" onclick="closeModal('modal-prompt')">&times;</button>
+        </div>
+        <div class="prompt-label" id="prompt-label"></div>
+        <input type="text" id="prompt-input" class="prompt-input">
+        <div id="prompt-extra" style="display:none; margin-bottom:12px">
+            <div style="font-size:13px;color:var(--muted);margin-bottom:6px" id="prompt-extra-label"></div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap" id="prompt-extra-btns"></div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-muted" onclick="closeModal('modal-prompt')">ยกเลิก</button>
+            <button class="btn btn-primary" id="prompt-ok-btn">ตกลง</button>
+        </div>
+    </div>
+</div>
+
+<!-- Backup / Export -->
+<div id="modal-backup" class="modal-overlay">
+    <div class="modal-box">
+        <div class="modal-head">
+            <h2>💾 Backup & Export</h2>
+            <button class="modal-close" onclick="closeModal('modal-backup')">&times;</button>
+        </div>
+        <div class="backup-grid">
+            <div class="backup-card" onclick="doBackup()">
+                <div class="bc-icon">📦</div>
+                <h4>Backup แบบ Local</h4>
+                <p>ดาวน์โหลดไฟล์ JSON เก็บไว้ในเครื่อง</p>
+            </div>
+            <div class="backup-card" onclick="doRestore()">
+                <div class="bc-icon">♻️</div>
+                <h4>Restore จาก Backup</h4>
+                <p>โหลดไฟล์ JSON ทับข้อมูลออนไลน์</p>
+            </div>
+            <div class="backup-card" onclick="openExportAttModal()">
+                <div class="bc-icon">📋</div>
+                <h4>Export เช็คชื่อ (.xlsx)</h4>
+                <p>ตารางการเข้าเรียนและเข้าแถว (รวมกัน)</p>
+            </div>
+            <div class="backup-card" onclick="exportScoreExcel()">
+                <div class="bc-icon">⭐</div>
+                <h4>Export คะแนน (.xlsx)</h4>
+                <p>ตารางคะแนนเก็บของห้องปัจจุบัน</p>
+            </div>
+        </div>
+        <input type="file" id="restore-file-input" accept=".json" style="display:none" onchange="doRestoreFile(this)">
+    </div>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<script>
+// ตรวจสอบว่ามีการล็อกอินด้วยอีเมลหรือไม่
+const userEmail = localStorage.getItem('userEmail');
+if (!userEmail) {
+    window.location.href = 'index.html'; // หากไม่มีอีเมลให้เด้งกลับไปหน้าล็อกอิน
+}
+
+function logout() {
+    localStorage.removeItem('userEmail'); // ลบอีเมลออกจากระบบเมื่อกดออกจากระบบ
+    window.location.href = 'index.html';
+}
+
+// =============================================
+// ข้อมูลวันหยุด (Holiday Info)
+// =============================================
+const THAI_HOLIDAYS = {
+    "01-01": "วันขึ้นปีใหม่", "04-06": "วันจักรี", "04-13": "วันสงกรานต์",
+    "04-14": "วันสงกรานต์", "04-15": "วันสงกรานต์", "05-01": "วันแรงงานแห่งชาติ",
+    "05-04": "วันฉัตรมงคล", "06-03": "วันเฉลิมฯ พระราชินี", "07-28": "วันเฉลิมฯ ร.10",
+    "08-12": "วันแม่แห่งชาติ", "10-13": "วันสวรรคต ร.9", "10-23": "วันปิยมหาราช",
+    "12-05": "วันชาติ / วันพ่อแห่งชาติ", "12-10": "วันรัฐธรรมนูญ", "12-31": "วันสิ้นปี"
+};
+const LUNAR_HOLIDAYS = {
+    "2024-02-24": "วันมาฆบูชา", "2024-05-22": "วันวิสาขบูชา", "2024-07-20": "วันอาสาฬหบูชา", "2024-07-21": "วันเข้าพรรษา",
+    "2025-02-13": "วันมาฆบูชา", "2025-05-11": "วันวิสาขบูชา", "2025-07-10": "วันอาสาฬหบูชา", "2025-07-11": "วันเข้าพรรษา",
+    "2026-03-03": "วันมาฆบูชา", "2026-05-31": "วันวิสาขบูชา", "2026-07-29": "วันอาสาฬหบูชา", "2026-07-30": "วันเข้าพรรษา",
+};
+
+function checkHoliday(dateStr) {
+    if (!dateStr) return "";
+    const md = dateStr.substring(5);
+    if (THAI_HOLIDAYS[md]) return THAI_HOLIDAYS[md];
+    if (LUNAR_HOLIDAYS[dateStr]) return LUNAR_HOLIDAYS[dateStr];
+    const d = new Date(dateStr);
+    if (d.getDay() === 0 || d.getDay() === 6) return "วันหยุดสุดสัปดาห์";
+    return "";
+}
+
+// =============================================
+// DATA & STATE
+// =============================================
+const defaultRooms   = {};
+const initialRosters = {};
+
+let roomNames      = JSON.parse(JSON.stringify(defaultRooms));
+let rosters        = JSON.parse(JSON.stringify(initialRosters));
+let allRecords     = {};
+let scoreCols      = {};
+let allScores      = {};
+let examCols       = {};
+let currentTeacherName = 'ยังไม่ระบุชื่อ';
+
+let students = [];
+let currentDate = '';
+let currentRoom = '';
+let draggedId = null;
+
+function ensureRoomStructures() {
+    for (const k of Object.keys(roomNames)) {
+        if (!rosters[k])   rosters[k]   = [];
+        if (!scoreCols[k]) scoreCols[k] = ['1','2','3'];
+        if (!allScores[k]) allScores[k] = {};
+        if (!examCols[k])  examCols[k]  = { midterm:'กลางภาค', final:'ปลายภาค' };
+    }
+}
+
+// =============================================
+// STORAGE HELPERS (ส่งข้อมูลไปที่ Node.js พร้อมแนบ Email)
+// =============================================
+function save(key, val) {
+    fetch('/api/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: userEmail, key: key, value: val }) // ส่งอีเมลไปบอก Backend
+    })
+    .then(response => response.json())
+    .catch(err => {
+        console.error(err);
+        showToast('⚠️ เกิดข้อผิดพลาดในการบันทึกข้อมูล');
+    });
+}
+
+function saveAll() {
+    save('roomNames', roomNames);
+    save('rosters', rosters);
+    save('allRecords', allRecords);
+    save('scoreCols', scoreCols);
+    save('allScores', allScores);
+    save('examCols', examCols);
+    save('currentTeacherName', currentTeacherName);
+}
+
+// =============================================
+// TOAST
+// =============================================
+let toastTimer;
+function showToast(msg, duration = 2500) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove('show'), duration);
+}
+
+// =============================================
+// INIT
+// =============================================
+function init() {
+    document.getElementById('user-email-display').textContent = userEmail; // แสดงชื่ออีเมลที่แถบด้านบน
+    document.getElementById('teacher-name-display').textContent = currentTeacherName;
+    updateRoomDropdowns();
+    const di = document.getElementById('current-date');
+    if (!di.value) di.valueAsDate = new Date();
+    loadData();
+}
+
+// =============================================
+// MODAL HELPERS
+// =============================================
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+function openConfirm(msg, note, icon, emoji, onOk, okLabel = 'ยืนยัน', okClass = 'btn-danger') {
+    document.getElementById('confirm-msg').innerHTML  = msg;
+    document.getElementById('confirm-note').innerHTML = note;
+    document.getElementById('confirm-note').style.display = note ? 'block' : 'none';
+    document.getElementById('confirm-icon').textContent = emoji || '⚠️';
+    const btn = document.getElementById('confirm-ok-btn');
+    btn.textContent = okLabel;
+    btn.className = `btn ${okClass} btn-lg`;
+    btn.onclick = () => { closeModal('modal-confirm'); onOk(); };
+    openModal('modal-confirm');
+}
+
+function openPrompt(title, label, onOk, defaultValFn, extraFn) {
+    document.getElementById('prompt-title').textContent = title;
+    document.getElementById('prompt-label').textContent = label;
+    const inp = document.getElementById('prompt-input');
+    inp.value = typeof defaultValFn === 'function' ? defaultValFn() : (defaultValFn || '');
+    document.getElementById('prompt-extra').style.display = 'none';
+    if (extraFn) extraFn();
+    document.getElementById('prompt-ok-btn').onclick = () => {
+        const v = inp.value.trim();
+        if (v) { closeModal('modal-prompt'); onOk(v); }
+        else showToast('⚠️ กรุณากรอกข้อมูล');
+    };
+    openModal('modal-prompt');
+    setTimeout(() => inp.focus(), 100);
+}
+
+// =============================================
+// ROOM MANAGEMENT
+// =============================================
+function updateRoomDropdowns() {
+    const selMain    = document.getElementById('room-select');
+    const selSummary = document.getElementById('summary-room-select');
+    const prevMain   = selMain.value;
+    const prevSumm   = selSummary.value;
+    let html = '';
+    for (const k in roomNames) html += `<option value="${k}">${roomNames[k]}</option>`;
+    selMain.innerHTML = selSummary.innerHTML = html;
+    if (roomNames[prevMain])   selMain.value    = prevMain;
+    else if (Object.keys(roomNames).length) selMain.value = Object.keys(roomNames)[0];
+    if (roomNames[prevSumm])   selSummary.value = prevSumm;
+}
+
+function addRoom() {
+    openPrompt('เพิ่มห้องเรียนใหม่', 'ชื่อห้องเรียน', (name) => {
+        const key = 'room' + Date.now();
+        roomNames[key] = name;
+        rosters[key]   = [];
+        scoreCols[key] = ['1','2','3'];
+        allScores[key] = {};
+        examCols[key]  = { midterm:'กลางภาค', final:'ปลายภาค' };
+        saveAll();
+        updateRoomDropdowns();
+        document.getElementById('room-select').value = key;
+        loadData();
+        showToast(`✅ เพิ่มห้อง "${name}" สำเร็จ`);
+    });
+}
+
+function saveRoomName(name) {
+    roomNames[currentRoom] = name;
+    save('roomNames', roomNames);
+    updateRoomDropdowns();
+    showToast('✅ แก้ไขชื่อห้องสำเร็จ');
+}
+
+function saveTeacherName(name) {
+    currentTeacherName = name;
+    save('currentTeacherName', name);
+    document.getElementById('teacher-name-display').textContent = name;
+    showToast('✅ บันทึกชื่อผู้สอนสำเร็จ');
+}
+
+function confirmDeleteRoom() {
+    if (Object.keys(roomNames).length <= 1) { showToast('⚠️ ต้องมีห้องอย่างน้อย 1 ห้อง'); return; }
+    const name = roomNames[currentRoom];
+    openConfirm(
+        `ต้องการลบห้อง "<strong>${name}</strong>" ใช่หรือไม่?`,
+        '⚠️ ข้อมูลทั้งหมด รายชื่อ เช็คชื่อ และคะแนน จะหายไปถาวร',
+        '', '🗑️', () => {
+            delete roomNames[currentRoom];
+            delete rosters[currentRoom];
+            delete scoreCols[currentRoom];
+            delete allScores[currentRoom];
+            delete examCols[currentRoom];
+            for (const d in allRecords) {
+                if (allRecords[d]) delete allRecords[d][currentRoom];
+            }
+            saveAll();
+            updateRoomDropdowns();
+            loadData();
+            showToast(`🗑️ ลบห้อง "${name}" แล้ว`);
+        }
+    );
+}
+
+// =============================================
+// TAB
+// =============================================
+function switchTab(tab) {
+    document.getElementById('tab-att').style.display   = tab === 'att'   ? 'block' : 'none';
+    document.getElementById('tab-score').style.display = tab === 'score' ? 'block' : 'none';
+    document.getElementById('btn-tab-att').classList.toggle('active', tab === 'att');
+    document.getElementById('btn-tab-score').classList.toggle('active', tab === 'score');
+}
+
+// =============================================
+// LOAD DATA
+// =============================================
+function loadData() {
+    currentDate = document.getElementById('current-date').value;
+    currentRoom = document.getElementById('room-select').value;
+    if (!currentRoom) return;
+
+    const holidayName = checkHoliday(currentDate);
+    const holidayIndicator = document.getElementById('holiday-indicator');
+    if (holidayName) {
+        holidayIndicator.textContent = `🛑 ${holidayName}`;
+        holidayIndicator.style.display = 'inline-block';
+    } else {
+        holidayIndicator.style.display = 'none';
+    }
+
+    if (!rosters[currentRoom])   rosters[currentRoom]   = [];
+    if (!scoreCols[currentRoom]) scoreCols[currentRoom] = ['1','2','3'];
+    if (!allScores[currentRoom]) allScores[currentRoom] = {};
+    if (!examCols[currentRoom])  examCols[currentRoom]  = { midterm:'กลางภาค', final:'ปลายภาค' };
+    if (!allRecords[currentDate]) allRecords[currentDate] = {};
+
+    students = allRecords[currentDate][currentRoom]
+        ? JSON.parse(JSON.stringify(allRecords[currentDate][currentRoom]))
+        : JSON.parse(JSON.stringify(rosters[currentRoom]));
+
+    students.forEach(s => {
+        if (s.status !== undefined && s.status_class === undefined) {
+            s.status_class = s.status;
+            delete s.status;
+        }
+        if (!s.status_class) s.status_class = 'pending';
+        if (!s.status_assembly) s.status_assembly = 'pending';
+        if (s.studentId === undefined) s.studentId = ''; 
+    });
+
+    document.getElementById('select-all').checked = false;
+    renderAttTable();
+    renderScoreTable();
+}
+
+// =============================================
+// ID MANAGEMENT
+// =============================================
+function applyIdMap(idMap) {
+    const roster = rosters[currentRoom];
+    for (const s of roster) if (idMap[s.id] !== undefined) s.id = idMap[s.id];
+
+    const oldSc = allScores[currentRoom];
+    const newSc = {};
+    for (const oid in oldSc) {
+        const nid = idMap[parseInt(oid)] ?? parseInt(oid);
+        newSc[nid] = oldSc[oid];
+    }
+    allScores[currentRoom] = newSc;
+
+    for (const d in allRecords) {
+        if (allRecords[d][currentRoom]) {
+            for (const s of allRecords[d][currentRoom]) if (idMap[s.id] !== undefined) s.id = idMap[s.id];
+            allRecords[d][currentRoom].sort((a,b) => a.id - b.id);
+        }
+    }
+    roster.sort((a,b) => a.id - b.id);
+    saveAll();
+    loadData();
+}
+
+function normalizeIds() {
+    const roster = [...rosters[currentRoom]].sort((a,b) => a.id - b.id);
+    let idMap = {};
+    let hasChange = false;
+    roster.forEach((s, i) => { if (s.id !== i+1) { idMap[s.id] = i+1; hasChange = true; } });
+    if (hasChange) applyIdMap(idMap);
+    else { saveAll(); loadData(); }
+}
+
+function shiftStudents(fromId, by) {
+    const roster = rosters[currentRoom];
+    let idMap = {};
+    for (const s of roster) idMap[s.id] = s.id >= fromId ? s.id + by : s.id;
+    applyIdMap(idMap);
+}
+
+function executeShift(oldId, newId) {
+    const roster = rosters[currentRoom];
+    const dir  = newId > oldId ? -1 : 1;
+    const minId = Math.min(oldId, newId), maxId = Math.max(oldId, newId);
+    let idMap = {};
+    for (const s of roster) {
+        if (s.id === oldId) idMap[s.id] = newId;
+        else if (s.id >= minId && s.id <= maxId) idMap[s.id] = s.id + dir;
+        else idMap[s.id] = s.id;
+    }
+    applyIdMap(idMap);
+}
+
+function executeSwap(idA, idB) {
+    let idMap = {};
+    for (const s of rosters[currentRoom]) idMap[s.id] = s.id;
+    idMap[idA] = idB; idMap[idB] = idA;
+    applyIdMap(idMap);
+}
+
+// =============================================
+// STUDENT CRUD
+// =============================================
+function openAddStudentModal() {
+    document.getElementById('bulk-input').value = '';
+    document.getElementById('insert-at').value  = '';
+    openModal('modal-add-student');
+}
+
+function saveBulkStudents() {
+    // 1. ตรวจสอบก่อนว่ามีการเลือกห้องเรียนแล้วหรือยัง
+    if (!currentRoom || !rosters[currentRoom]) {
+        showToast('⚠️ กรุณาเพิ่ม/เลือกห้องเรียนก่อนเพิ่มรายชื่อนักเรียน');
+        return;
+    }
+
+    const lines = document.getElementById('bulk-input').value
+        .split('\n').map(l => l.trim()).filter(Boolean);
+    if (!lines.length) { showToast('⚠️ กรุณาใส่รายชื่ออย่างน้อย 1 คน'); return; }
+
+    const roster = rosters[currentRoom];
+    const maxId  = roster.length ? Math.max(...roster.map(s => s.id)) : 0;
+    const rawInsert = document.getElementById('insert-at').value;
+    let startId  = parseInt(rawInsert, 10);
+    const N = lines.length;
+
+    if (!isNaN(startId) && startId > 0) {
+        const currentIds = roster.map(s => s.id);
+        if (currentIds.some(id => id >= startId)) {
+            let idMap = {};
+            for (const s of roster) idMap[s.id] = s.id >= startId ? s.id + N : s.id;
+            for (const s of roster) if (idMap[s.id] !== undefined) s.id = idMap[s.id];
+            
+            // ป้องกันกรณีที่ allScores ยังไม่ถูกสร้าง
+            if (!allScores[currentRoom]) allScores[currentRoom] = {};
+            
+            const oldSc = allScores[currentRoom];
+            const newSc = {};
+            for (const oid in oldSc) {
+                const nid = idMap[parseInt(oid)] ?? parseInt(oid);
+                newSc[nid] = oldSc[oid];
+            }
+            allScores[currentRoom] = newSc;
+            for (const d in allRecords) {
+                if (allRecords[d][currentRoom]) {
+                    for (const s of allRecords[d][currentRoom]) if (idMap[s.id] !== undefined) s.id = idMap[s.id];
+                }
+            }
+        }
+    } else {
+        startId = maxId + 1;
+    }
+
+    lines.forEach((line, i) => {
+        const sid = startId + i;
+        let sName = line;
+        let sCode = '';
+
+        const match = line.match(/^([\w-]{4,})\s+(.+)$/);
+        if (match && !isNaN(parseInt(match[1]))) {
+            sCode = match[1];
+            sName = match[2].trim();
+        }
+
+        const newS = { id: sid, studentId: sCode, name: sName, status_class: 'pending', status_assembly: 'pending' };
+        rosters[currentRoom].push(newS);
+        if (allRecords[currentDate]?.[currentRoom]) allRecords[currentDate][currentRoom].push({ ...newS });
+        if(!allScores[currentRoom]) allScores[currentRoom] = {};
+        
+        // ป้องกัน Error หากไม่มีคอลัมน์คะแนน
+        const colLength = scoreCols[currentRoom] ? scoreCols[currentRoom].length : 0;
+        allScores[currentRoom][sid] = { assigns: Array(colLength).fill(''), midterm:'', final:'' };
+    });
+
+    rosters[currentRoom].sort((a,b) => a.id - b.id);
+    if (allRecords[currentDate]?.[currentRoom]) allRecords[currentDate][currentRoom].sort((a,b) => a.id - b.id);
+
+    saveAll();
+    closeModal('modal-add-student');
+    loadData();
+    showToast(`✅ เพิ่มนักเรียน ${lines.length} คนสำเร็จ`);
+}
+
+function editName(sid) {
+    const idx = rosters[currentRoom].findIndex(s => s.id === sid);
+    if (idx < 0) return;
+    openPrompt('แก้ไขชื่อนักเรียน', `ชื่อ-นามสกุล (เลขที่ ${sid})`, (name) => {
+        rosters[currentRoom][idx].name = name;
+        for (const d in allRecords) {
+            const rec = allRecords[d][currentRoom]?.find(s => s.id === sid);
+            if (rec) rec.name = name;
+        }
+        saveAll(); loadData(); showToast('✅ แก้ไขชื่อสำเร็จ');
+    }, () => rosters[currentRoom][idx].name);
+}
+
+function editStudentCode(sid) {
+    const idx = rosters[currentRoom].findIndex(s => s.id === sid);
+    if (idx < 0) return;
+    openPrompt('แก้ไขรหัสประจำตัว', `รหัสประจำตัวนักเรียน (เลขที่ ${sid})`, (code) => {
+        rosters[currentRoom][idx].studentId = code;
+        for (const d in allRecords) {
+            const rec = allRecords[d][currentRoom]?.find(s => s.id === sid);
+            if (rec) rec.studentId = code;
+        }
+        saveAll(); loadData(); showToast('✅ แก้ไขรหัสประจำตัวสำเร็จ');
+    }, () => rosters[currentRoom][idx].studentId || '');
+}
+
+function editStudentId(oldId) {
+    openPrompt(
+        'แก้ไขเลขที่',
+        `เลขที่ปัจจุบัน: ${oldId} — กรอกเลขที่ใหม่`,
+        (val) => {
+            const newId = parseInt(val, 10);
+            if (isNaN(newId) || newId <= 0) { showToast('⚠️ กรอกตัวเลขที่ถูกต้อง'); return; }
+            if (newId === oldId) return;
+            const conflict = rosters[currentRoom].find(s => s.id === newId);
+            if (conflict) {
+                openPrompt(
+                    'เลขที่ซ้ำ — เลือกวิธีจัดการ',
+                    `เลขที่ ${newId} มีนักเรียน "${conflict.name}" อยู่แล้ว`,
+                    () => {},
+                    () => val,
+                    () => {
+                        document.getElementById('prompt-extra').style.display = 'block';
+                        document.getElementById('prompt-extra-label').textContent = 'เลือกวิธีจัดการ:';
+                        document.getElementById('prompt-extra-btns').innerHTML = `
+                            <button class="btn btn-primary" onclick="closeModal('modal-prompt');executeSwap(${oldId},${newId})">🔄 สลับที่กัน</button>
+                            <button class="btn btn-warning" onclick="closeModal('modal-prompt');executeShift(${oldId},${newId})">⬇️ แทรกและดันลง</button>
+                        `;
+                        document.getElementById('prompt-ok-btn').style.display = 'none';
+                    }
+                );
+                setTimeout(() => { document.getElementById('prompt-ok-btn').style.display = 'none'; }, 10);
+            } else {
+                let idMap = {};
+                for (const s of rosters[currentRoom]) idMap[s.id] = s.id;
+                idMap[oldId] = newId;
+                applyIdMap(idMap);
+                showToast(`✅ เปลี่ยนเลขที่ ${oldId} → ${newId} สำเร็จ`);
+            }
+        },
+        () => String(oldId)
+    );
+}
+
+function deleteStudent(sid) {
+    const s = rosters[currentRoom].find(x => x.id === sid);
+    openConfirm(
+        `ลบ "<strong>${s?.name}</strong>" (เลขที่ ${sid})?`,
+        '⚠️ ประวัติเช็คชื่อและคะแนนจะหายถาวร เลขที่ของคนถัดไปจะเลื่อนขึ้น',
+        '', '🗑️', () => {
+            rosters[currentRoom] = rosters[currentRoom].filter(x => x.id !== sid);
+            for (const d in allRecords) {
+                if (allRecords[d][currentRoom])
+                    allRecords[d][currentRoom] = allRecords[d][currentRoom].filter(x => x.id !== sid);
+            }
+            if (allScores[currentRoom]) delete allScores[currentRoom][sid];
+            normalizeIds();
+            showToast('🗑️ ลบนักเรียนแล้ว');
+        }
+    );
+}
+
+function toggleSelectAll(src) {
+    document.querySelectorAll('.student-cb').forEach(cb => cb.checked = src.checked);
+}
+
+function confirmDeleteSelected() {
+    const checked = [...document.querySelectorAll('.student-cb:checked')];
+    if (!checked.length) { showToast('⚠️ กรุณาติ๊กเลือกนักเรียนก่อน'); return; }
+    openConfirm(
+        `ลบนักเรียน <strong>${checked.length} คน</strong> ที่เลือก?`,
+        '⚠️ ข้อมูลเช็คชื่อและคะแนนจะหายถาวร', '', '🗑️', () => {
+            const ids = checked.map(cb => parseInt(cb.value));
+            rosters[currentRoom] = rosters[currentRoom].filter(s => !ids.includes(s.id));
+            for (const d in allRecords)
+                if (allRecords[d][currentRoom])
+                    allRecords[d][currentRoom] = allRecords[d][currentRoom].filter(s => !ids.includes(s.id));
+            ids.forEach(id => { if (allScores[currentRoom]) delete allScores[currentRoom][id]; });
+            normalizeIds();
+            showToast('🗑️ ลบนักเรียนที่เลือกแล้ว');
+        }
+    );
+}
+
+function confirmDeleteAll() {
+    if (!rosters[currentRoom].length) { showToast('ไม่มีนักเรียนในห้องนี้'); return; }
+    openConfirm(
+        `ลบนักเรียน <strong>ทั้งหมด</strong> ในห้องนี้?`,
+        '⚠️ ข้อมูลทั้งหมดจะหายถาวร ไม่สามารถกู้คืนได้',
+        '', '💀', () => {
+            rosters[currentRoom] = [];
+            allScores[currentRoom] = {};
+            for (const d in allRecords) if (allRecords[d][currentRoom]) allRecords[d][currentRoom] = [];
+            saveAll(); loadData();
+            showToast('🗑️ ลบนักเรียนทั้งหมดแล้ว');
+        }
+    );
+}
+
+// =============================================
+// DRAG & DROP
+// =============================================
+let dragSrc;
+function onDragStart(e) {
+    draggedId = parseInt(this.dataset.id);
+    e.dataTransfer.effectAllowed = 'move';
+    setTimeout(() => this.style.opacity = '0.4', 0);
+}
+function onDragOver(e) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; return false; }
+function onDragEnter(e) { e.preventDefault(); this.classList.add('drag-over'); }
+function onDragLeave()  { this.classList.remove('drag-over'); }
+function onDrop(e) {
+    e.stopPropagation();
+    this.classList.remove('drag-over');
+    const targetId = parseInt(this.dataset.id);
+    if (draggedId && targetId && draggedId !== targetId) executeShift(draggedId, targetId);
+    return false;
+}
+function onDragEnd() {
+    this.style.opacity = '1';
+    document.querySelectorAll('#att-tbody tr').forEach(tr => tr.classList.remove('drag-over'));
+}
+
+// =============================================
+// ATTENDANCE TABLE
+// =============================================
+function badgeHtml(status, reason) {
+    const map = {
+        present: ['badge-present','✅ มา'],
+        leave:   ['badge-leave','🔵 ลา'],
+        absent:  ['badge-absent','❌ ขาด'],
+        late:    ['badge-late','⚠️ สาย'],
+    };
+    const [cls, lbl] = map[status] || ['badge-pending','รอเช็คชื่อ'];
+    let html = `<span class="badge ${cls}">${lbl}</span>`;
+    
+    if (status === 'leave' && reason) {
+        html += `<div style="font-size:11px; color:var(--muted); margin-top:4px;">💬 ${reason}</div>`;
+    }
+    
+    return html;
+}
+
+function renderAttTable() {
+    const tbody = document.getElementById('att-tbody');
+    tbody.innerHTML = '';
+    let present = 0, leave = 0, absent = 0, late = 0;
+    
+    const attType = document.getElementById('att-type-select').value;
+
+    if (!students.length) {
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--muted)">ยังไม่มีรายชื่อนักเรียนในห้องนี้</td></tr>`;
+    }
+
+    students.forEach((s, idx) => {
+        const st = s[attType]; 
+        const reason = s[`${attType}_reason`] || ''; 
+
+        if (st === 'present') present++;
+        else if (st === 'leave') leave++;
+        else if (st === 'absent') absent++;
+        else if (st === 'late') late++;
+
+        const tr = document.createElement('tr');
+        tr.setAttribute('draggable', 'true');
+        tr.dataset.id = s.id;
+        tr.ondragstart = onDragStart;
+        tr.ondragover  = onDragOver;
+        tr.ondragenter = onDragEnter;
+        tr.ondragleave = onDragLeave;
+        tr.ondrop      = onDrop;
+        tr.ondragend   = onDragEnd;
+
+        tr.innerHTML = `
+            <td style="text-align:center"><input type="checkbox" class="student-cb cb" value="${s.id}"></td>
+            <td>
+                <span style="cursor:grab;margin-right:4px" title="ลากเพื่อย้าย">↕️</span>
+                ${s.id}
+                <button class="cell-btn" onclick="editStudentId(${s.id})" title="แก้ไขเลขที่">✏️</button>
+            </td>
+            <td>
+                <span style="font-family:monospace; color:#4B5563;">${s.studentId || '-'}</span>
+                <button class="cell-btn" onclick="editStudentCode(${s.id})" title="แก้ไขรหัสประจำตัว">✏️</button>
+            </td>
+            <td>
+                ${s.name}
+                <button class="cell-btn" onclick="editName(${s.id})" title="แก้ไขชื่อ">✏️</button>
+                <button class="cell-btn del" onclick="deleteStudent(${s.id})" title="ลบ">🗑️</button>
+            </td>
+            <td>${badgeHtml(st, reason)}</td>
+            <td>
+                <div class="row-btns">
+                    <button class="row-btn row-btn-present" onclick="markOne(${idx},'present')">มา</button>
+                    <button class="row-btn row-btn-leave"   onclick="promptLeave(${idx})">ลา</button>
+                    <button class="row-btn row-btn-absent"  onclick="markOne(${idx},'absent')">ขาด</button>
+                    <button class="row-btn row-btn-late"    onclick="markOne(${idx},'late')">สาย</button>
+                </div>
+            </td>
+            <td style="text-align:center;">
+                <button class="btn btn-outline" style="padding: 5px 10px; font-size: 11px;" onclick="viewStudentSummary(${s.id})">📊 สรุป</button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+
+    document.getElementById('stat-total').textContent   = students.length;
+    document.getElementById('stat-present').textContent = present;
+    document.getElementById('stat-leave').textContent   = leave;
+    document.getElementById('stat-absent').textContent  = absent;
+    document.getElementById('stat-late').textContent    = late;
+
+    if (!allRecords[currentDate]) allRecords[currentDate] = {};
+    allRecords[currentDate][currentRoom] = students;
+    save('allRecords', allRecords);
+}
+
+function promptLeave(idx) {
+    openPrompt('ระบุสาเหตุการลา', 'เช่น ป่วย, ลากิจ', (reason) => {
+        const attType = document.getElementById('att-type-select').value;
+        students[idx][attType] = 'leave';
+        students[idx][`${attType}_reason`] = reason;
+        renderAttTable();
+    });
+}
+
+function markOne(idx, status) {
+    const attType = document.getElementById('att-type-select').value;
+    students[idx][attType] = status;
+    if (status !== 'leave') {
+        students[idx][`${attType}_reason`] = '';
+    }
+    renderAttTable();
+}
+
+function markBulkLeave() {
+    if (!students.length) return;
+    const checked = [...document.querySelectorAll('.student-cb:checked')];
+    const attType = document.getElementById('att-type-select').value;
+
+    if (checked.length) {
+        openPrompt('ระบุสาเหตุการลา', 'เช่น ป่วย, ลากิจ (สำหรับทุกคนที่เลือก)', (reason) => {
+            const ids = checked.map(cb => parseInt(cb.value));
+            students.forEach(s => { 
+                if (ids.includes(s.id)) {
+                    s[attType] = 'leave'; 
+                    s[`${attType}_reason`] = reason;
+                } 
+            });
+            document.getElementById('select-all').checked = false;
+            document.querySelectorAll('.student-cb').forEach(cb => cb.checked = false);
+            renderAttTable();
+            showToast(`✅ เช็คลา ${checked.length} คน พร้อมระบุสาเหตุ`);
+        });
+    } else {
+        openConfirm(
+            `เช็คชื่อ <strong>นักเรียนทุกคน</strong> เป็น "ลา"?`,
+            '', '', '🎯', () => {
+                openPrompt('ระบุสาเหตุการลา', 'เช่น ป่วย, ลากิจ (สำหรับนักเรียนทุกคน)', (reason) => {
+                    students.forEach(s => {
+                        s[attType] = 'leave';
+                        s[`${attType}_reason`] = reason;
+                    });
+                    renderAttTable();
+                    showToast(`✅ เช็คลาทุกคน พร้อมระบุสาเหตุ`);
+                });
+            }, 'ยืนยัน', 'btn-primary'
+        );
+    }
+}
+
+function markBulk(status) {
+    if (!students.length) return;
+    const checked = [...document.querySelectorAll('.student-cb:checked')];
+    const statusTh = { present:'มา', absent:'ขาด', late:'สาย' }[status];
+    const attType = document.getElementById('att-type-select').value;
+
+    if (checked.length) {
+        const ids = checked.map(cb => parseInt(cb.value));
+        students.forEach(s => { 
+            if (ids.includes(s.id)) {
+                s[attType] = status;
+                if (status !== 'leave') s[`${attType}_reason`] = ''; 
+            } 
+        });
+        document.getElementById('select-all').checked = false;
+        document.querySelectorAll('.student-cb').forEach(cb => cb.checked = false);
+        renderAttTable();
+        showToast(`✅ เช็คชื่อ ${checked.length} คน เป็น "${statusTh}"`);
+    } else {
+        openConfirm(
+            `เช็คชื่อ <strong>นักเรียนทุกคน</strong> เป็น "${statusTh}"?`,
+            '', '', '🎯', () => {
+                students.forEach(s => {
+                    s[attType] = status;
+                    if (status !== 'leave') s[`${attType}_reason`] = '';
+                });
+                renderAttTable();
+                showToast(`✅ เช็คชื่อทุกคนเป็น "${statusTh}"`);
+            }, 'ยืนยัน', 'btn-primary'
+        );
+    }
+}
+
+function confirmReset() {
+    const attType = document.getElementById('att-type-select').value;
+    const attTypeName = attType === 'status_class' ? 'เข้าเรียน' : 'เข้าแถว';
+    openConfirm(
+        `ล้างการเช็คชื่อ (${attTypeName}) วันที่ <strong>${currentDate}</strong>?`,
+        'สถานะทุกคนของหมวดหมู่นี้จะกลับเป็น "รอเช็คชื่อ"', '', '🔄', () => {
+            students = students.map(s => ({ ...s, [attType]:'pending', [`${attType}_reason`]: '' }));
+            renderAttTable();
+            showToast('🔄 ล้างการเช็คชื่อแล้ว');
+        }, 'ล้าง', 'btn-muted'
+    );
+}
+
+// =============================================
+// SCORE TABLE
+// =============================================
+function addScoreCol() {
+    openPrompt('เพิ่มช่องคะแนนเก็บ', 'ชื่อช่องคะแนน', (name) => {
+        scoreCols[currentRoom].push(name);
+        save('scoreCols', scoreCols);
+        for (const sid in allScores[currentRoom]) {
+            if (allScores[currentRoom][sid].assigns) allScores[currentRoom][sid].assigns.push('');
+        }
+        save('allScores', allScores);
+        renderScoreTable();
+        showToast('✅ เพิ่มช่องคะแนนสำเร็จ');
+    }, () => `ครั้งที่ ${scoreCols[currentRoom].length + 1}`);
+}
+
+function renameScoreCol(i) {
+    openPrompt('แก้ไขชื่อช่องคะแนน', 'ชื่อช่อง', (name) => {
+        scoreCols[currentRoom][i] = name;
+        save('scoreCols', scoreCols);
+        renderScoreTable();
+    }, () => scoreCols[currentRoom][i]);
+}
+
+function deleteScoreCol(i) {
+    const name = scoreCols[currentRoom][i];
+    openConfirm(`ลบช่องคะแนน "<strong>${name}</strong>"?`, '⚠️ คะแนนในช่องนี้ของทุกคนจะหายถาวร', '', '❌', () => {
+        scoreCols[currentRoom].splice(i, 1);
+        save('scoreCols', scoreCols);
+        for (const sid in allScores[currentRoom])
+            allScores[currentRoom][sid].assigns?.splice(i, 1);
+        save('allScores', allScores);
+        renderScoreTable();
+        showToast(`🗑️ ลบช่อง "${name}" แล้ว`);
+    });
+}
+
+function renameExamCol(type) {
+    openPrompt('แก้ไขชื่อช่องสอบ', 'ชื่อช่อง (ระบุคะแนนเต็มได้ เช่น กลางภาค (20))', (name) => {
+        examCols[currentRoom][type] = name;
+        save('examCols', examCols);
+        renderScoreTable();
+    }, () => examCols[currentRoom][type]);
+}
+
+function bulkAssignScore(colIdx) {
+    openPrompt(`กรอกคะแนน "${scoreCols[currentRoom][colIdx]}" ให้ทุกคน`, 'คะแนน (จะทับค่าเดิมทั้งหมด)', (val) => {
+        rosters[currentRoom].forEach(s => {
+            if (!allScores[currentRoom][s.id])
+                allScores[currentRoom][s.id] = { assigns: Array(scoreCols[currentRoom].length).fill(''), midterm:'', final:'' };
+            allScores[currentRoom][s.id].assigns[colIdx] = val;
+        });
+        save('allScores', allScores);
+        renderScoreTable();
+        showToast('⚡ กรอกคะแนนทุกคนสำเร็จ');
+    });
+}
+
+function bulkExamScore(type) {
+    const name = examCols[currentRoom][type];
+    openPrompt(`กรอกคะแนน "${name}" ให้ทุกคน`, 'คะแนน (จะทับค่าเดิมทั้งหมด)', (val) => {
+        rosters[currentRoom].forEach(s => {
+            if (!allScores[currentRoom][s.id])
+                allScores[currentRoom][s.id] = { assigns: Array(scoreCols[currentRoom].length).fill(''), midterm:'', final:'' };
+            allScores[currentRoom][s.id][type] = val;
+        });
+        save('allScores', allScores);
+        renderScoreTable();
+        showToast('⚡ กรอกคะแนนทุกคนสำเร็จ');
+    });
+}
+
+function calculateGrade(total) {
+    if (total >= 80) return "4";
+    if (total >= 75) return "3.5";
+    if (total >= 70) return "3";
+    if (total >= 65) return "2.5";
+    if (total >= 60) return "2";
+    if (total >= 55) return "1.5";
+    if (total >= 50) return "1";
+    return "0";
+}
+
+function renderScoreTable() {
+    const wrap = document.getElementById('score-table-wrap');
+    const cols = scoreCols[currentRoom] || [];
+    const ec   = examCols[currentRoom]  || { midterm:'กลางภาค', final:'ปลายภาค' };
+
+    let h = `<table id="score-table"><thead><tr>
+        <th rowspan="2" class="sticky-col sticky-id">เลขที่</th>
+        <th rowspan="2" class="sticky-col sticky-code">รหัสประจำตัว</th>
+        <th rowspan="2" class="sticky-col sticky-name">ชื่อ - นามสกุล</th>
+        <th colspan="${Math.max(1,cols.length)}" style="background:#E5E7EB;border-bottom:1px solid var(--border)">คะแนนเก็บ</th>
+        <th rowspan="2">รวมเก็บ</th>
+        <th rowspan="2">
+            <div class="col-header">${ec.midterm}
+            <div class="col-actions">
+                <button class="cell-btn" onclick="bulkExamScore('midterm')" title="กรอกทุกคน">⚡</button>
+                <button class="cell-btn" onclick="renameExamCol('midterm')" title="แก้ไขชื่อ">✏️</button>
+            </div></div>
+        </th>
+        <th rowspan="2">
+            <div class="col-header">${ec.final}
+            <div class="col-actions">
+                <button class="cell-btn" onclick="bulkExamScore('final')" title="กรอกทุกคน">⚡</button>
+                <button class="cell-btn" onclick="renameExamCol('final')" title="แก้ไขชื่อ">✏️</button>
+            </div></div>
+        </th>
+        <th rowspan="2">รวม</th>
+        <th rowspan="2" style="background:#EBF2EC; color:#3F5E41;">เกรด</th>
+    </tr><tr>`;
+
+    if (!cols.length) h += `<th>-</th>`;
+    else cols.forEach((c, i) => {
+        h += `<th><div class="col-header">${c}
+            <div class="col-actions">
+                <button class="cell-btn" onclick="bulkAssignScore(${i})" title="กรอกทุกคน">⚡</button>
+                <button class="cell-btn" onclick="renameScoreCol(${i})" title="เปลี่ยนชื่อ">✏️</button>
+                <button class="cell-btn del" onclick="deleteScoreCol(${i})" title="ลบ">❌</button>
+            </div></div></th>`;
+    });
+
+    h += `</tr></thead><tbody>`;
+
+    const rs = rosters[currentRoom] || [];
+    if (!rs.length) {
+        h += `<tr><td colspan="${7 + Math.max(1,cols.length)}" style="text-align:center;padding:30px;color:var(--muted)">ยังไม่มีนักเรียน</td></tr>`;
+    }
+
+    rs.forEach(student => {
+        if (!allScores[currentRoom][student.id])
+            allScores[currentRoom][student.id] = { assigns: Array(cols.length).fill(''), midterm:'', final:'' };
+        const sc = allScores[currentRoom][student.id];
+        while (sc.assigns.length < cols.length) sc.assigns.push('');
+        sc.assigns.length = cols.length;
+
+        const assignSum = sc.assigns.reduce((acc, v) => acc + (parseFloat(v) || 0), 0);
+        const mid = parseFloat(sc.midterm) || 0;
+        const fin = parseFloat(sc.final)   || 0;
+        const tot = assignSum + mid + fin;
+        const grade = calculateGrade(tot); 
+
+        h += `<tr>
+            <td class="sticky-col sticky-id">${student.id}</td>
+            <td class="sticky-col sticky-code">${student.studentId || '-'}</td>
+            <td class="sticky-col sticky-name">${student.name}</td>`;
+
+        if (!cols.length) h += `<td>-</td>`;
+        else cols.forEach((_, i) => {
+            h += `<td><input type="number" class="score-input" value="${sc.assigns[i] ?? ''}" onchange="updateScore(${student.id},'assign',${i},this.value)"></td>`;
+        });
+
+        h += `
+            <td class="score-sum" id="sum-${student.id}">${assignSum}</td>
+            <td><input type="number" class="score-input wide" value="${sc.midterm}" onchange="updateScore(${student.id},'midterm',0,this.value)"></td>
+            <td><input type="number" class="score-input wide" value="${sc.final}"   onchange="updateScore(${student.id},'final',0,this.value)"></td>
+            <td class="score-total" id="tot-${student.id}">${tot}</td>
+            <td style="font-weight:bold; color:var(--success);" id="grade-${student.id}">${grade}</td> 
+        </tr>`;
+    });
+
+    h += `</tbody></table>`;
+    wrap.innerHTML = h;
+}
+
+function updateScore(sid, type, idx, val) {
+    const sc = allScores[currentRoom][sid];
+    if (type === 'assign') sc.assigns[idx] = val;
+    else sc[type] = val;
+    save('allScores', allScores);
+
+    const assignSum = sc.assigns.reduce((acc,v) => acc + (parseFloat(v)||0), 0);
+    const mid = parseFloat(sc.midterm)||0;
+    const fin = parseFloat(sc.final)||0;
+    const tot = assignSum + mid + fin;
+    
+    document.getElementById(`sum-${sid}`).textContent = assignSum;
+    document.getElementById(`tot-${sid}`).textContent = tot;
+    document.getElementById(`grade-${sid}`).textContent = calculateGrade(tot); 
+}
+
+// =============================================
+// SUMMARY MODALS
+// =============================================
+function openSummaryModal() {
+    document.getElementById('summary-room-select').value = currentRoom;
+    renderSummaryTable();
+    openModal('modal-summary');
+}
+
+function renderSummaryTable() {
+    const room = document.getElementById('summary-room-select').value;
+    const attType = document.getElementById('summary-att-type').value; 
+    if (!rosters[room]) return;
+
+    const stats = {};
+    rosters[room].forEach(s => stats[s.id] = { name: s.name, studentId: s.studentId, present:0, leave:0, absent:0, late:0 });
+
+    const uniqueRecordsByDate = {};
+    for (const d in allRecords) {
+        const cleanDate = d.substring(0, 10); 
+        if (!uniqueRecordsByDate[cleanDate] || d === cleanDate) {
+            uniqueRecordsByDate[cleanDate] = allRecords[d][room];
+        }
+    }
+
+    for (const cleanDate in uniqueRecordsByDate) {
+        uniqueRecordsByDate[cleanDate]?.forEach(s => {
+            if (stats[s.id]) {
+                const st = s[attType] || s.status; 
+                if (st === 'present') stats[s.id].present++;
+                if (st === 'leave')   stats[s.id].leave++;
+                if (st === 'absent')  stats[s.id].absent++;
+                if (st === 'late')    stats[s.id].late++;
+            }
+        });
+    }
+
+    let html = '';
+    for (const id in stats) {
+        const st = stats[id];
+        
+        let remark = '-';
+        if (st.absent > 4) {
+             if (attType === 'status_class') {
+                 remark = '<span class="badge badge-absent" style="font-size:11px;">ไม่มีสิทธิ์สอบ</span>';
+             } else if (attType === 'status_assembly') {
+                 remark = '<span class="badge badge-absent" style="font-size:11px;">ไม่ผ่านกิจกรรม</span>';
+             }
+        }
+
+        html += `<tr>
+            <td>${id}</td>
+            <td style="font-family:monospace; color:#4B5563;">${st.studentId || '-'}</td>
+            <td>${st.name}</td>
+            <td style="color:var(--success);font-weight:600">${st.present}</td>
+            <td style="color:var(--info);font-weight:600">${st.leave}</td>
+            <td style="color:var(--danger);font-weight:600">${st.absent}</td>
+            <td style="color:var(--warning);font-weight:600">${st.late}</td>
+            <td style="text-align:center">${remark}</td>
+        </tr>`;
+    }
+    document.getElementById('summary-tbody').innerHTML = html || '<tr><td colspan="8" style="text-align:center;color:var(--muted)">ยังไม่มีข้อมูล</td></tr>';
+}
+
+function viewStudentSummary(sid) {
+    const student = rosters[currentRoom].find(s => s.id === sid);
+    if(!student) return;
+
+    let presentClass=0, leaveClass=0, absentClass=0, lateClass=0;
+    let presentAssm=0, leaveAssm=0, absentAssm=0, lateAssm=0;
+
+    const uniqueRecordsByDate = {};
+    for (const d in allRecords) {
+        const cleanDate = d.substring(0, 10);
+        if (!uniqueRecordsByDate[cleanDate] || d === cleanDate) {
+            uniqueRecordsByDate[cleanDate] = allRecords[d][currentRoom];
+        }
+    }
+
+    for (const date in uniqueRecordsByDate) {
+        const recs = uniqueRecordsByDate[date];
+        if(recs) {
+            const sData = recs.find(r => r.id === sid);
+            if(sData) {
+                const stC = sData.status_class || sData.status;
+                if(stC==='present') presentClass++;
+                if(stC==='leave') leaveClass++;
+                if(stC==='absent') absentClass++;
+                if(stC==='late') lateClass++;
+
+                const stA = sData.status_assembly || (sData.status_class === undefined ? sData.status : 'pending');
+                if(stA==='present') presentAssm++;
+                if(stA==='leave') leaveAssm++;
+                if(stA==='absent') absentAssm++;
+                if(stA==='late') lateAssm++;
+            }
+        }
+    }
+
+    const sc = allScores[currentRoom][sid] || { assigns:[], midterm:'', final:'' };
+    const assignSum = sc.assigns.reduce((a,v) => a + (parseFloat(v)||0), 0);
+    const mid = parseFloat(sc.midterm)||0;
+    const fin = parseFloat(sc.final)||0;
+    const tot = assignSum + mid + fin;
+    
+    const grade = calculateGrade(tot);
+
+    document.getElementById('student-summary-title').textContent = `📊 สรุปข้อมูล: ${student.name} (รหัส: ${student.studentId || '-'})`;
+    
+    let html = `
+        <h4 style="margin-bottom:8px; color:var(--primary); font-size:15px;">📚 เข้าเรียน</h4>
+        <div class="summary-grid" style="grid-template-columns: repeat(4, 1fr); margin-bottom: 20px; gap:10px;">
+            <div class="stat-card present" style="padding:12px 10px;">
+                <h3 style="margin-bottom:4px;">มา</h3>
+                <div class="num" style="font-size:22px; color:var(--success);">${presentClass}</div>
+            </div>
+            <div class="stat-card leave" style="padding:12px 10px;">
+                <h3 style="margin-bottom:4px;">ลา</h3>
+                <div class="num" style="font-size:22px; color:var(--info);">${leaveClass}</div>
+            </div>
+            <div class="stat-card absent" style="padding:12px 10px;">
+                <h3 style="margin-bottom:4px;">ขาด</h3>
+                <div class="num" style="font-size:22px; color:var(--danger);">${absentClass}</div>
+            </div>
+            <div class="stat-card late" style="padding:12px 10px;">
+                <h3 style="margin-bottom:4px;">สาย</h3>
+                <div class="num" style="font-size:22px; color:var(--warning);">${lateClass}</div>
+            </div>
+        </div>
+
+        <h4 style="margin-bottom:8px; color:var(--primary); font-size:15px;">🇹🇭 เข้าแถว</h4>
+        <div class="summary-grid" style="grid-template-columns: repeat(4, 1fr); margin-bottom: 20px; gap:10px;">
+            <div class="stat-card present" style="padding:12px 10px;">
+                <h3 style="margin-bottom:4px;">มา</h3>
+                <div class="num" style="font-size:22px; color:var(--success);">${presentAssm}</div>
+            </div>
+            <div class="stat-card leave" style="padding:12px 10px;">
+                <h3 style="margin-bottom:4px;">ลา</h3>
+                <div class="num" style="font-size:22px; color:var(--info);">${leaveAssm}</div>
+            </div>
+            <div class="stat-card absent" style="padding:12px 10px;">
+                <h3 style="margin-bottom:4px;">ขาด</h3>
+                <div class="num" style="font-size:22px; color:var(--danger);">${absentAssm}</div>
+            </div>
+            <div class="stat-card late" style="padding:12px 10px;">
+                <h3 style="margin-bottom:4px;">สาย</h3>
+                <div class="num" style="font-size:22px; color:var(--warning);">${lateAssm}</div>
+            </div>
+        </div>
+
+        <h4 style="margin-bottom:8px; color:var(--primary); font-size:15px;">⭐ คะแนนเก็บ</h4>
+        <div class="table-wrap" style="box-shadow:none; border:1px solid var(--border); border-radius:8px;">
+            <table style="width:100%; border-collapse:collapse; margin-bottom:0;">
+                <tr>
+                    <td style="border-bottom:1px solid var(--border); padding:10px 12px; color:var(--text);">คะแนนเก็บรวม</td>
+                    <td style="border-bottom:1px solid var(--border); padding:10px 12px; text-align:center; font-weight:600; width:80px;">${assignSum}</td>
+                </tr>
+                <tr>
+                    <td style="border-bottom:1px solid var(--border); padding:10px 12px; color:var(--text);">กลางภาค</td>
+                    <td style="border-bottom:1px solid var(--border); padding:10px 12px; text-align:center; font-weight:600;">${mid}</td>
+                </tr>
+                <tr>
+                    <td style="border-bottom:1px solid var(--border); padding:10px 12px; color:var(--text);">ปลายภาค</td>
+                    <td style="border-bottom:1px solid var(--border); padding:10px 12px; text-align:center; font-weight:600;">${fin}</td>
+                </tr>
+                <tr style="background:var(--primary-light);">
+                    <td style="border-bottom:1px solid var(--border); padding:12px; font-weight:700; color:var(--text);">คะแนนรวมทั้งหมด</td>
+                    <td style="border-bottom:1px solid var(--border); padding:12px; text-align:center; font-weight:700; color:var(--primary); font-size:16px;">${tot}</td>
+                </tr>
+                <tr style="background:var(--success-light);">
+                    <td style="padding:12px; font-weight:700; color:var(--text);">เกรดที่ได้</td>
+                    <td style="padding:12px; text-align:center; font-weight:700; color:var(--success); font-size:18px;">${grade}</td>
+                </tr>
+            </table>
+        </div>
+    `;
+
+    document.getElementById('student-summary-content').innerHTML = html;
+    openModal('modal-student-summary');
+}
+
+
+// =============================================
+// PRINT
+// =============================================
+function printAttendance() { window.print(); }
+function printSummary() { window.print(); }
+
+// =============================================
+// BACKUP / RESTORE / EXPORT
+// =============================================
+function openBackupModal() { openModal('modal-backup'); }
+
+function doBackup() {
+    const data = {
+        version: 3,
+        exportedAt: new Date().toISOString(),
+        roomNames, rosters, allRecords, scoreCols, allScores, examCols, currentTeacherName
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type:'application/json' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = `student-backup-${new Date().toISOString().slice(0,10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast('📦 Backup เป็นไฟล์สำเร็จ');
+}
+
+function doRestore() {
+    openConfirm(
+        'โหลด Backup ทับข้อมูลทั้งหมด?',
+        '⚠️ ข้อมูลออนไลน์ปัจจุบันจะถูกแทนที่ด้วยข้อมูลจากไฟล์ backup',
+        '', '♻️', () => {
+            document.getElementById('restore-file-input').click();
+        }, 'เลือกไฟล์', 'btn-primary'
+    );
+}
+
+function doRestoreFile(input) {
+    const file = input.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        try {
+            const data = JSON.parse(e.target.result);
+            if (!data.roomNames || !data.rosters) throw new Error('ไฟล์ไม่ถูกต้อง');
+            roomNames  = data.roomNames;
+            rosters    = data.rosters;
+            allRecords = data.allRecords || {};
+            scoreCols  = data.scoreCols  || {};
+            allScores  = data.allScores  || {};
+            examCols   = data.examCols   || {};
+            if(data.currentTeacherName) currentTeacherName = data.currentTeacherName;
+            
+            saveAll();
+            updateRoomDropdowns();
+            loadData();
+            closeModal('modal-backup');
+            showToast('✅ Restore ไฟล์ขึ้นระบบออนไลน์สำเร็จ');
+        } catch(err) {
+            showToast('❌ ไฟล์ไม่ถูกต้อง: ' + err.message);
+        }
+    };
+    reader.readAsText(file);
+    input.value = '';
+}
+
+function openExportAttModal() {
+    closeModal('modal-backup'); 
+    
+    const dates = Object.keys(allRecords).map(d => d.substring(0, 10)).sort();
+    if(dates.length > 0) {
+        document.getElementById('export-start-date').value = dates[0];
+        document.getElementById('export-end-date').value = dates[dates.length - 1];
+    } else {
+        const today = new Date().toISOString().substring(0, 10);
+        document.getElementById('export-start-date').value = today;
+        document.getElementById('export-end-date').value = today;
+    }
+    
+    openModal('modal-export-att');
+}
+
+// =============================================
+// EXPORT EXCEL เช็คชื่อ (รองรับการกรองวันที่และวันหยุด)
+// =============================================
+function executeExportAttExcel() {
+    const startDateStr = document.getElementById('export-start-date').value;
+    const endDateStr = document.getElementById('export-end-date').value;
+    const excludeWeekend = document.getElementById('export-exclude-weekend').checked;
+
+    if (!startDateStr || !endDateStr) {
+        showToast('⚠️ กรุณาเลือกวันที่เริ่มต้นและสิ้นสุด');
+        return;
+    }
+
+    const start = new Date(startDateStr);
+    const end = new Date(endDateStr);
+
+    const rawDates = Object.keys(allRecords);
+    let uniqueDates = [...new Set(rawDates.map(d => d.substring(0, 10)))].sort();
+
+    uniqueDates = uniqueDates.filter(d => {
+        const current = new Date(d);
+        if (current < start || current > end) return false;
+        
+        if (excludeWeekend) {
+            const day = current.getDay();
+            if (day === 0 || day === 6) return false; 
+        }
+        
+        return true;
+    });
+
+    if (uniqueDates.length === 0) {
+        showToast('⚠️ ไม่มีข้อมูลในช่วงวันที่เลือก');
+        return;
+    }
+
+    const roomStudents = rosters[currentRoom] || [];
+    if (!roomStudents.length) { showToast('⚠️ ไม่มีข้อมูลนักเรียน'); return; }
+
+    const headers = ['เลขที่', 'รหัสประจำตัว', 'ชื่อ-นามสกุล'];
+    uniqueDates.forEach(d => {
+        headers.push(`${d} (เข้าแถว)`);
+        headers.push(`${d} (เข้าเรียน)`);
+    });
+    
+    const rows = roomStudents.map(s => {
+        const row = [s.id, s.studentId || '-', s.name];
+        uniqueDates.forEach(cleanDate => {
+            let rec = allRecords[cleanDate]?.[currentRoom]?.find(r => r.id === s.id);
+            if (!rec) {
+                rec = allRecords[`${cleanDate} (เข้าเรียน)`]?.[currentRoom]?.find(r => r.id === s.id) ||
+                      allRecords[`${cleanDate}(เข้าเรียน)`]?.[currentRoom]?.find(r => r.id === s.id) ||
+                      allRecords[`${cleanDate} (เข้าแถว)`]?.[currentRoom]?.find(r => r.id === s.id) ||
+                      allRecords[`${cleanDate}(เข้าแถว)`]?.[currentRoom]?.find(r => r.id === s.id);
+            }
+
+            const statusMap = { present:'มา', leave:'ลา', absent:'ขาด', late:'สาย', pending:'-' };
+            
+            let st_assembly = '-';
+            let st_class = '-';
+            
+            if (rec) {
+                let s_ass = rec.status_assembly || (rec.status_class === undefined ? rec.status : 'pending');
+                st_assembly = statusMap[s_ass] || '-';
+                if (s_ass === 'leave' && rec.status_assembly_reason) st_assembly += ` (${rec.status_assembly_reason})`;
+
+                let s_cls = rec.status_class || rec.status;
+                st_class = statusMap[s_cls] || '-';
+                if (s_cls === 'leave' && rec.status_class_reason) st_class += ` (${rec.status_class_reason})`;
+            }
+            
+            row.push(st_assembly);
+            row.push(st_class);
+        });
+        return row;
+    });
+
+    const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+    
+    const range = XLSX.utils.decode_range(ws['!ref']);
+    for (let R = range.s.r; R <= range.e.r; ++R) {
+        for (let C = range.s.c; C <= range.e.c; ++C) {
+            const cell_address = {c: C, r: R};
+            const cell_ref = XLSX.utils.encode_cell(cell_address);
+            
+            if (!ws[cell_ref]) ws[cell_ref] = { t: 's', v: '' };
+
+            ws[cell_ref].s = {
+                border: {
+                    top: { style: "thin", color: { rgb: "000000" } },
+                    bottom: { style: "thin", color: { rgb: "000000" } },
+                    left: { style: "thin", color: { rgb: "000000" } },
+                    right: { style: "thin", color: { rgb: "000000" } }
+                },
+                alignment: {
+                    vertical: "center",
+                    horizontal: C <= 2 ? (C===0 ? "center" : "left") : "center" 
+                },
+                font: { name: "Prompt", sz: 11 }
+            };
+
+            if (R > 0 && C > 2) { 
+                const val = ws[cell_ref].v;
+                if (val === 'มา') {
+                    ws[cell_ref].s.fill = { fgColor: { rgb: "C6EFCE" } };
+                    ws[cell_ref].s.font.color = { rgb: "006100" }; 
+                } else if (val === 'ขาด') {
+                    ws[cell_ref].s.fill = { fgColor: { rgb: "FFC7CE" } };
+                    ws[cell_ref].s.font.color = { rgb: "9C0006" }; 
+                } else if (val === 'สาย') {
+                    ws[cell_ref].s.fill = { fgColor: { rgb: "FFEB9C" } };
+                    ws[cell_ref].s.font.color = { rgb: "9C6500" };
+                } else if (val.startsWith('ลา')) {
+                    ws[cell_ref].s.fill = { fgColor: { rgb: "DBEAFE" } };
+                    ws[cell_ref].s.font.color = { rgb: "1E3A8A" };
+                }
+            }
+
+            if (R === 0) {
+                ws[cell_ref].s.font.bold = true;
+                ws[cell_ref].s.fill = { fgColor: { rgb: "EAEAEA" } }; 
+            }
+        }
+    }
+
+    ws['!cols'] = [
+        { wch: 8 },  
+        { wch: 15 },
+        { wch: 30 }   
+    ];
+    
+    uniqueDates.forEach(() => {
+        ws['!cols'].push({ wch: 16 });
+        ws['!cols'].push({ wch: 16 });
+    });
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "เช็คชื่อรวม");
+    XLSX.writeFile(wb, `att-filtered-${roomNames[currentRoom]}-${startDateStr}-to-${endDateStr}.xlsx`);
+    
+    showToast(`📊 Export เช็คชื่อสำเร็จ`);
+    closeModal('modal-export-att');
+}
+
+function exportScoreExcel() {
+    const roomStudents = rosters[currentRoom] || [];
+    if (!roomStudents.length) { showToast('⚠️ ไม่มีข้อมูลนักเรียน'); return; }
+
+    const cols = scoreCols[currentRoom] || [];
+    const ec   = examCols[currentRoom]  || { midterm:'กลางภาค', final:'ปลายภาค' };
+    
+    const headers = ['เลขที่','รหัสประจำตัว','ชื่อ-นามสกุล',...cols, 'รวมเก็บ', ec.midterm, ec.final, 'รวม', 'เกรด'];
+
+    const rows = roomStudents.map(s => {
+        const sc = allScores[currentRoom]?.[s.id] || { assigns:[], midterm:'', final:'' };
+        const assigns = cols.map((_, i) => sc.assigns?.[i] ?? '');
+        const assignSum = assigns.reduce((a,v) => a + (parseFloat(v)||0), 0);
+        const mid = parseFloat(sc.midterm)||0;
+        const fin = parseFloat(sc.final)||0;
+        const tot = assignSum + mid + fin;
+        const grade = calculateGrade(tot); 
+        return [s.id, s.studentId || '-', s.name, ...assigns, assignSum, sc.midterm, sc.final, tot, grade]; 
+    });
+
+    const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+    
+    const range = XLSX.utils.decode_range(ws['!ref']);
+    for (let R = range.s.r; R <= range.e.r; ++R) {
+        for (let C = range.s.c; C <= range.e.c; ++C) {
+            const cell_address = {c: C, r: R};
+            const cell_ref = XLSX.utils.encode_cell(cell_address);
+            if (!ws[cell_ref]) ws[cell_ref] = { t: 's', v: '' };
+            ws[cell_ref].s = {
+                border: {
+                    top: { style: "thin", color: { rgb: "000000" } },
+                    bottom: { style: "thin", color: { rgb: "000000" } },
+                    left: { style: "thin", color: { rgb: "000000" } },
+                    right: { style: "thin", color: { rgb: "000000" } }
+                },
+                alignment: { vertical: "center", horizontal: C <= 2 ? "left" : "center" }
+            };
+            if (R === 0) {
+                ws[cell_ref].s.font = { bold: true };
+                ws[cell_ref].s.fill = { fgColor: { rgb: "EAEAEA" } };
+            }
+        }
+    }
+    
+    ws['!cols'] = [{ wch: 8 }, { wch: 15 }, { wch: 30 }];
+    for(let i=0; i<cols.length+5; i++) ws['!cols'].push({wch: 10}); 
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'คะแนน');
+    XLSX.writeFile(wb, `scores-${roomNames[currentRoom]}-${new Date().toISOString().slice(0,10)}.xlsx`);
+    showToast('📊 Export คะแนนสำเร็จ');
+    closeModal('modal-backup');
+}
+
+// =============================================
+// EXCEL IMPORT
+// =============================================
+function handleExcelImport(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, { type: 'array' });
+            
+            const firstSheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[firstSheetName];
+            
+            const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
+            
+            let names = [];
+            let nameColIdx = -1;
+            let lastNameColIdx = -1;
+            let titleColIdx = -1;
+            let studentIdColIdx = -1; 
+            let startRow = 0;
+
+            for (let i = 0; i < Math.min(15, jsonData.length); i++) {
+                let row = jsonData[i];
+                for (let j = 0; j < row.length; j++) {
+                    let cellStr = String(row[j]).trim().replace(/\s+/g, '');
+                    if (!cellStr) continue;
+                    
+                    if (cellStr.includes('รหัส') || cellStr.toLowerCase() === 'id' || cellStr.includes('เลขประจำตัว')) {
+                        studentIdColIdx = j;
+                    }
+
+                    if ((cellStr.includes('ชื่อ') && !cellStr.includes('คำนำ')) || cellStr.toLowerCase() === 'name') {
+                        nameColIdx = j;
+                        startRow = i + 1;
+                        
+                        for(let k = j + 1; k < row.length && k <= j + 3; k++) {
+                             let nextStr = String(row[k]).trim().replace(/\s+/g, '');
+                             if (nextStr.includes('สกุล') || nextStr.toLowerCase() === 'lastname' || nextStr.toLowerCase() === 'surname') {
+                                 lastNameColIdx = k;
+                                 break;
+                             }
+                        }
+                        
+                        for(let k = Math.max(0, j - 2); k < j; k++) {
+                             let prevStr = String(row[k]).trim().replace(/\s+/g, '');
+                             if (prevStr.includes('คำนำ') || prevStr === 'ยศ') {
+                                 titleColIdx = k;
+                                 break;
+                             }
+                        }
+                    }
+                }
+                if (nameColIdx !== -1) break; 
+            }
+
+            for (let i = startRow; i < jsonData.length; i++) {
+                let row = jsonData[i];
+                if (!row || row.length === 0) continue;
+
+                let fullName = "";
+                let stuId = studentIdColIdx !== -1 ? String(row[studentIdColIdx] || '').trim() : "";
+
+                if (nameColIdx !== -1) {
+                    let title = titleColIdx !== -1 ? String(row[titleColIdx] || '').trim() : "";
+                    let fName = String(row[nameColIdx] || '').trim();
+                    let lName = lastNameColIdx !== -1 ? String(row[lastNameColIdx] || '').trim() : "";
+
+                    if (!fName || !isNaN(fName)) continue;
+
+                    fullName = `${title} ${fName} ${lName}`.replace(/\s+/g, ' ').trim();
+                } else {
+                    let parts = [];
+                    for(let j = 0; j < row.length; j++) {
+                         let cell = String(row[j] || '').trim();
+                         if (cell && isNaN(cell) && cell.length > 1) {
+                              const skipWords = ['ชาย', 'หญิง', 'ช', 'ญ', 'ช.', 'ญ.', 'รวม', 'เฉลี่ย'];
+                              if (skipWords.includes(cell)) continue;
+                              if (/^[มป]\.\s?\d/.test(cell) || /^\d\/\d/.test(cell) || cell.includes('ห้อง')) continue;
+                              
+                              parts.push(cell);
+                              if (parts.length >= 3) break;
+                         }
+                    }
+                    fullName = parts.join(' ').replace(/\s+/g, ' ').trim();
+                }
+
+                if (fullName.length > 3) {
+                    if (stuId) {
+                        names.push(`${stuId} ${fullName}`);
+                    } else {
+                        names.push(fullName);
+                    }
+                }
+            }
+
+            if (names.length > 0) {
+                const textarea = document.getElementById('bulk-input');
+                const currentVal = textarea.value.trim();
+                textarea.value = currentVal ? currentVal + '\n' + names.join('\n') : names.join('\n');
+                showToast(`✅ ดึงรายชื่อสำเร็จ ${names.length} คน`);
+            } else {
+                showToast('⚠️ ไม่พบข้อมูลรายชื่อ (กรุณาตรวจสอบรูปแบบไฟล์)');
+            }
+        } catch (error) {
+            showToast('❌ เกิดข้อผิดพลาดในการอ่านไฟล์');
+            console.error(error);
+        }
+        
+        event.target.value = '';
+    };
+    
+    reader.readAsArrayBuffer(file);
+}
+
+// =============================================
+// INIT EVENT LISTENERS & โหลดข้อมูลจาก Backend
+// =============================================
+window.onload = () => {
+    showToast('กำลังโหลดข้อมูล...', 5000);
+
+    let isInit = false;
+    const forceInit = () => {
+        if (isInit) return;
+        isInit = true;
+        ensureRoomStructures();
+        init();
+    };
+
+    setTimeout(() => {
+        if (!isInit) {
+            showToast('⚠️ เชื่อมต่อฐานข้อมูลช้า ใช้โหมด Offline ชั่วคราว', 3000);
+            forceInit();
+        }
+    }, 3000);
+
+    // ส่งอีเมลไปขอดึงข้อมูลเฉพาะของอีเมลนี้
+    fetch(`/api/load?email=${encodeURIComponent(userEmail)}`)
+        .then(response => response.json())
+        .then((data) => {
+            if (data && Object.keys(data).length > 0) {
+                if (data.roomNames) roomNames = data.roomNames;
+                if (data.examCols) examCols = data.examCols;
+                if (data.currentTeacherName) currentTeacherName = data.currentTeacherName;
+
+                if (data.rosters) {
+                    for (let k in data.rosters) {
+                        rosters[k] = Object.values(data.rosters[k] || {}).filter(Boolean);
+                    }
+                }
+                if (data.allRecords) {
+                    for (let d in data.allRecords) {
+                        for (let r in data.allRecords[d]) {
+                            data.allRecords[d][r] = Object.values(data.allRecords[d][r] || {}).filter(Boolean);
+                        }
+                    }
+                    allRecords = data.allRecords;
+                }
+                if (data.scoreCols) {
+                    for (let k in data.scoreCols) {
+                        scoreCols[k] = Object.values(data.scoreCols[k] || {}).filter(Boolean);
+                    }
+                }
+                if (data.allScores) {
+                    for (let room in data.allScores) {
+                        for (let sid in data.allScores[room]) {
+                            if (data.allScores[room][sid].assigns) {
+                                data.allScores[room][sid].assigns = Object.values(data.allScores[room][sid].assigns);
+                            }
+                        }
+                    }
+                    allScores = data.allScores;
+                }
+            }
+
+            if (!isInit) {
+                showToast('✅ โหลดข้อมูลจาก Backend สำเร็จ');
+                forceInit();
+            }
+
+            // ผูก Event Listeners
+            document.getElementById('prompt-input').addEventListener('keypress', e => {
+                if (e.key === 'Enter') document.getElementById('prompt-ok-btn').click();
+            });
+            document.querySelectorAll('.modal-overlay').forEach(overlay => {
+                overlay.addEventListener('click', e => {
+                    if (e.target === overlay) overlay.classList.remove('open');
+                });
+            });
+        })
+        .catch(e => {
+            console.error(e);
+            showToast('⚠️ ไม่สามารถเชื่อมต่อฐานข้อมูลได้ ใช้ข้อมูลเริ่มต้น');
+            forceInit();
+        });
+};
+</script>
+</body>
+</html>

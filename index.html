@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>เข้าสู่ระบบ - ระบบจัดการนักเรียน</title>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #637A9F;
+            --primary-light: #EBF1F6;
+            --primary-hover: #4D648B;
+            --bg: #F5F7FA;
+            --card: #FFFFFF;
+            --text: #374151;
+            --muted: #838F9F;
+            --border: #E2E8F0;
+        }
+
+        body {
+            margin: 0; padding: 0; display: flex; justify-content: center; align-items: center;
+            min-height: 100vh; background-color: var(--bg); font-family: 'Prompt', sans-serif; color: var(--text);
+        }
+
+        .login-card {
+            background-color: var(--card); padding: 45px 35px; border-radius: 18px;
+            box-shadow: 0 10px 40px rgba(99, 122, 159, 0.12); width: 100%; max-width: 400px;
+            text-align: center; box-sizing: border-box; border: 1px solid rgba(226, 232, 240, 0.6);
+        }
+
+        .login-header { display: flex; flex-direction: column; align-items: center; gap: 12px; margin-bottom: 8px; }
+        .login-icon {
+            font-size: 38px; background: var(--primary-light); width: 70px; height: 70px;
+            display: flex; justify-content: center; align-items: center; border-radius: 50%;
+            margin-bottom: 5px; color: var(--primary);
+        }
+        .login-title { color: var(--primary); font-size: 24px; font-weight: 600; margin: 0; letter-spacing: 0.5px; }
+        .login-subtitle { color: var(--muted); font-size: 14px; margin-top: 8px; margin-bottom: 28px; line-height: 1.5; }
+
+        .login-input {
+            width: 100%; padding: 14px; border: 1.5px solid var(--border); border-radius: 10px;
+            font-size: 15px; text-align: center; font-family: 'Prompt', sans-serif; box-sizing: border-box;
+            margin-bottom: 20px; color: var(--text); transition: all 0.2s ease; background-color: #FAFBFC;
+        }
+        .login-input::placeholder { color: #A0AEC0; font-weight: 300; }
+        .login-input:focus { outline: none; border-color: var(--primary); background-color: #FFFFFF; box-shadow: 0 0 0 4px rgba(99, 122, 159, 0.1); }
+
+        .login-button {
+            width: 100%; padding: 14px; background-color: var(--primary); color: #ffffff; border: none;
+            border-radius: 10px; font-size: 16px; font-weight: 500; font-family: 'Prompt', sans-serif;
+            cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 10px rgba(99, 122, 159, 0.2);
+        }
+        .login-button:hover { background-color: var(--primary-hover); transform: translateY(-2px); box-shadow: 0 6px 15px rgba(99, 122, 159, 0.25); }
+        .login-button:active { transform: translateY(0); }
+    </style>
+</head>
+<body>
+
+    <div class="login-card">
+        <div class="login-header">
+            <div class="login-icon">🏫</div>
+            <h1 class="login-title">เข้าสู่ระบบ</h1>
+        </div>
+        <p class="login-subtitle">กรุณากรอกอีเมลของคุณเพื่อเข้าใช้งาน<br>ระบบจัดการนักเรียน</p>
+        
+        <form id="loginForm" onsubmit="handleLogin(event)">
+            <input type="email" id="email" name="email" class="login-input" placeholder="example@school.com" autocomplete="email" required>
+            <button type="submit" class="login-button">ลงชื่อเข้าใช้</button>
+        </form>
+    </div>
+
+    <script>
+        function handleLogin(event) {
+            event.preventDefault(); // ป้องกันหน้าเว็บรีเฟรชตัวเอง
+            const emailInput = document.getElementById('email').value;
+            
+            if (emailInput) {
+                localStorage.setItem('userEmail', emailInput); // บันทึกอีเมลลงในระบบ
+                window.location.href = 'Roll call.html'; // สั่งให้เปลี่ยนหน้าไปที่ Roll call.html
+            }
+        }
+    </script>
+</body>
+</html>
